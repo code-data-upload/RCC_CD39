@@ -215,7 +215,7 @@ length(ordering_genes)
 
 
 for( jj in dir("F:/CRC/ref/removed_geneset/")){
-  rm.genes<-read.csv(paste0("F:/notebook_return/CRC/ref/removed_geneset/", jj))
+  rm.genes<-read.csv(paste0("F:/CRC/ref/removed_geneset/", jj))
   ordering_genes<-setdiff(ordering_genes, rm.genes[,1])
 }
 
