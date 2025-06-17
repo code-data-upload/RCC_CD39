@@ -14,12 +14,12 @@ library(DDRTree); library(monocle);
 
 rna_counts_matrix<-read.table( "GSE285701_single_cell_rna_data.txt", sep="\t")
 adt_counts_matrix<-read.table( "GSE285701_single_cell_adt_data.txt", sep="\t")
-
+rcc_meta_info<-read.table( "GSE285701_single_cell_meta_data.txt", sep="\t" )
 
 ### RNA unbiased clustering
 #######################################################################################################
 
-sr<-CreateSeuratObject(counts = rna_counts_matrix, names.delim = "_")
+sr<-CreateSeuratObject(counts = rna_counts_matrix, meta.data = rcc_meta_info)
 DefaultAssay(sr) <- 'RNA'
 sr = NormalizeData(sr, normalization.method = "LogNormalize", scale.factor = 10000) ;
 sr = FindVariableFeatures(sr, selection.method="vst", nfeatures=2000) ;
@@ -65,9 +65,6 @@ for( tmp_gene in c( "PD-1", "CD39")){
 
 
 
-tcr_info<-read.table("GSE285701_single_cell_tcr_info.txt")
-sr$cell_barcode<-rownames(sr@meta.data)
-sr@meta.data<-left_join(sr@meta.data, tcr_info, by = "cell_barcode")
 
 ### HLA types and TCR sequences mapped to virus sequences
 #######################################################################################################
@@ -125,6 +122,10 @@ for( i in unique(mhc_matched_db$from_mhc)){
 
 
 
+
+TS_RT183 <- repLoad("RT183.clonotypes.TRB.txt")
+TS_RT199 <- repLoad("RT199.clonotypes.TRB.txt")
+TS_RT208 <- repLoad("RT208.clonotypes.TRB.txt")
 
 ## tumor-specific clonotypes
 
