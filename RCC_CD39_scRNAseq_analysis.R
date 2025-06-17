@@ -12,29 +12,14 @@ library(scran); library(scDblFinder); library(RColorBrewer); library(harmony); l
 library(ggbreak); library(Nebulosa); library(unikn); library(BiocFileCache); library(Matrix);
 library(DDRTree); library(monocle);
 
-
-
-patient_color<-c("RB183"="#7e6148","RB208"="#b09c85", "RT183"="#998e8f", "RT199"="#77625e", "RT208"="#3f292c")
-sample_color<-c("RB"="#4040d0", "RT"="#ca462f")
-adt_color<-c("CD39-PD1-"="#79af97","CD39-PD1+"="#374e55","CD39+PD1-"="#df8f44","CD39+PD1+"="#b24746")
-cluster_color<-c("0"="#f8766d","1"="#a3a500","2"="#00bf7d","3"="#00b0f6","4"="#e76bf3")
-ts_color<-c("0"="grey90","1"= "#3f292c")
-viral_color<-c("no info"="grey90","InfluenzaA"="#774385", "EBV"="#a3a500", "CMV"="#165459")
-clonal_color<-c("N=1"="#7d9072", "N≥2"="#aaacc5", "N≥5"="#c9b2c6", "N≥10"="#580a3c")
-
-
-raw_sr<-readRDS( "E:/RCC_cd39/2024_01_11_TS_update_aab_ab_TS_as_least_1_ok/update__TCR_aab_ab_and_TS_mapping_at_least_1_cell_ok_011124.rds");sr<-raw_sr
-save_sr<-raw_sr
-
-
-
-
+rna_counts_matrix<-read.table( "GSE285701_single_cell_rna_data.txt", sep="\t")
+adt_counts_matrix<-read.table( "GSE285701_single_cell_adt_data.txt", sep="\t")
 
 
 ### RNA unbiased clustering
 #######################################################################################################
 
-sr<-CreateSeuratObject(save_sr@assays$RNA@counts, meta.data=save_sr@meta.data)
+sr<-CreateSeuratObject(counts = rna_counts_matrix, names.delim = "_")
 DefaultAssay(sr) <- 'RNA'
 sr = NormalizeData(sr, normalization.method = "LogNormalize", scale.factor = 10000) ;
 sr = FindVariableFeatures(sr, selection.method="vst", nfeatures=2000) ;
@@ -57,7 +42,7 @@ DimPlot(sr, label.size = 7, label = T) + coord_equal()
 ### classification of ADT CD39+/-PD1+/- cells
 #######################################################################################################
 
-sr[["ADT"]] <- CreateAssayObject(counts = save_sr@assays$ADT@counts)
+sr[["ADT"]] <- CreateAssayObject(counts = adt_counts_matrix)
 DefaultAssay(sr) <- 'ADT'
 
 VariableFeatures(sr) <- rownames(sr[["ADT"]])
@@ -71,7 +56,7 @@ for( tmp_gene in c( "PD-1", "CD39")){
   Turns = which(DeltaY[-1] * DeltaY[-length(DeltaY)] < 0) +1
 
     print("########################################");     print(tmp_gene);     print(Da$x[Turns[1:4]])
-    plot(Da, xlab="", ylab="", main=tmp_gene)+points(Da$x[Turns[1:4]], Da$y[Turns[1:4]], pch=c(1,16,1,1), col=c("black","red","black","black"))
+    plot(Da, xlab="", ylab="", main=tmp_gene)+points(Da$x[Turns[1:4]], Da$y[Turns[1:4]], pch=c(1,16,1,1), col=c("black", "red", "black", "black"))
     text(Da$x[Turns[2]], Da$y[Turns[2]] + 0.03, labels = round(Da$x[Turns[2]], 7), col = "red", cex = 1)
 }
 
@@ -80,11 +65,14 @@ for( tmp_gene in c( "PD-1", "CD39")){
 
 
 
+tcr_info<-read.table("GSE285701_single_cell_tcr_info.txt")
+sr$cell_barcode<-rownames(sr@meta.data)
+sr@meta.data<-left_join(sr@meta.data, tcr_info, by = "cell_barcode")
 
 ### HLA types and TCR sequences mapped to virus sequences
 #######################################################################################################
 
-sr$mhc<-recode(sr$final_orig.ident,
+sr$mhc<-recode(sr$orig.ident,
                "RB183"="HLA-A_11:01;HLA-A_24:02;HLA-B_51:01;HLA-B_54:01;HLA-C_01:02;HLA-C_14:02",
                "RT183"="HLA-A_11:01;HLA-A_24:02;HLA-B_51:01;HLA-B_54:01;HLA-C_01:02;HLA-C_14:02",
                "RB208"= "HLA-A_02:01;HLA-A_24:02;HLA-B_07:02;HLA-B_40:06;HLA-C_01:02;HLA-C_07:67",
@@ -97,7 +85,6 @@ tcr_meta$cb<-rownames(tcr_meta)
 
 
 vdjdb = dbLoad("https://gitlab.com/immunomind/immunarch/raw/dev-0.5.0/private/vdjdb.slim.txt.gz", "vdjdb")
-dim(vdjdb.TRB)
 vdjdb<-vdjdb%>%  filter(gene=="TRB", Pathology %in% c("CMV", "EBV", "InfluenzaA"), mhc.class=="MHCI")
 vdjdb.TRB$mhc.a<-gsub("[*]","_", vdjdb.TRB$mhc.a)
 
@@ -209,8 +196,8 @@ fd <- new("AnnotatedDataFrame", data = data.frame("gene_short_name"=genes, row.n
 pd <- new("AnnotatedDataFrame", data = data.frame("barcode"=barc, row.names=barc))
 cds <- newCellDataSet(mat, phenoData = pd, featureData = fd);cds
 
-pData(cds)[,c("final_orig.ident","sample_type", "cell_type", "CD39_PD1", "pathology","TS", "Sequence")]<-
-  c(as.factor(subset_sr$final_orig.ident), as.factor(subset_sr$sample_type), as.factor(subset_sr$cell_type), 
+pData(cds)[,c("orig.ident","sample_type", "cell_type", "CD39_PD1", "pathology","TS", "Sequence")]<-
+  c(as.factor(subset_sr$orig.ident), as.factor(subset_sr$sample_type), as.factor(subset_sr$cell_type), 
     as.factor(subset_sr$CD39_PD1), as.factor(subset_sr$pathology), as.factor(subset_sr$TS), as.factor(subset_sr$Sequence))
 
 
