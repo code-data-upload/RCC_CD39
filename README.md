@@ -4,5 +4,6 @@ Single-cell sequencing data have been deposited on the Gene Expression Omnibus (
 
 
 If you find our work useful in your research or if you use parts of this code please consider citing our paper:
+
 Lee, Yong Joon, et al. "Tumor-specific but immunosuppressive CD39+ CD8+ T cells exhibit double-faceted roles in clear cell renal cell carcinoma." Cell Reports Medicine 6.10 (2025).
 https://doi.org/10.1016/j.xcrm.2025.102360
